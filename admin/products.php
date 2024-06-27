@@ -42,7 +42,7 @@ class AdminProductsFeedProduct {
             if(!empty($productsFeedData['gender'])) $productsFeed['gender'] = $productsFeedData['gender'];
         }
 
-        $formGoogle = new FormBuilder();
+        $formGoogle = form();
         $formGoogle
             ->add('productsFeed[categoryGoogle]', 'select', [
                 'label'     => 'Danh mục Google',
@@ -106,8 +106,8 @@ class AdminProductsFeedProduct {
     }
     static function save($productId, $module): void
     {
-        if($module == 'products' && have_posts(Request::post('productsFeed'))) {
-            $request    = Request::post('productsFeed');
+        if($module == 'products' && have_posts(request()->input('productsFeed'))) {
+            $request    = request()->input('productsFeed');
             $productsFeed = [
                 'categoryGoogle'    => (!empty($request['categoryGoogle'])) ? $request['categoryGoogle'] : '',
                 'categoryFacebook'  => (!empty($request['categoryFacebook'])) ? $request['categoryFacebook'] : '',

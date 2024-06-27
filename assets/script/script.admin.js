@@ -10,12 +10,12 @@ class ProductsFeedTableHandle {
 			id: element.attr('data-id')
 		}
 
-		$.post(ajax, data, function() {}, 'json').done(function(response) {
-			show_message(response.message, response.status);
+		request.post(ajax, data).then(function(response) {
+			SkilldoMessage.response(response)
 			element.removeAttr('disabled');
 			element.html('<i class="fa-light fa-arrows-rotate"></i>');
-			if(response.status == 'success') {
-				element.closest('.column-timeUp').find('span').html(response.timeUp);
+			if(response.status === 'success') {
+				element.closest('.column-timeUp').find('span').html(response.data.timeUp);
 			}
 		});
 
@@ -65,15 +65,20 @@ class ProductsFeedHandle {
 		let self = this;
 
 		if(this.productType == 'productsCustom') {
+
 			let data = {
-				'action' : 'AdminProductFeedsAjax::productLoad',
-				'id' : this.id
+				action : 'AdminProductFeedsAjax::productLoad',
+				id : this.id
 			}
+
 			let self = this;
-			$.post(ajax, data, function (data) { }, 'json').done(function (response) {
-				if (response.status === 'error') show_message(response.message, response.status);
+
+			request.post(ajax, data).then(function (response) {
+				if (response.status === 'error') {
+					SkilldoMessage.response(response)
+				}
 				if (response.status === 'success') {
-					self.ProductList.products = response.products;
+					self.ProductList.products = response.data;
 					self.productRender();
 				}
 			});
@@ -106,8 +111,8 @@ class ProductsFeedHandle {
 			keyword     : $('input[name="search_name"]').val()
 		}
 
-		$.post(ajax, data, function() {}, 'json').done(function( response ) {
-			show_message(response.message, response.status);
+		request.post(ajax, data).then(function( response ) {
+			SkilldoMessage.response(response)
 			if( response.status === 'success') {
 
 				let listProduct = decodeURIComponent(atob(response.data).split('').map(function (c) {
@@ -169,14 +174,14 @@ class ProductsFeedHandle {
 			data.products.unshift(item.id)
 		}
 
-		$.post(ajax, data, function() {}, 'json').done(function(response) {
+		request.post(ajax, data).then(function(response) {
 
 			$('.loading').hide();
 
-			show_message(response.message, response.status);
+			SkilldoMessage.response(response)
 
 			if(response.status === 'success') {
-				window.location = response.location;
+				window.location = response.data;
 			}
 		});
 
@@ -196,11 +201,11 @@ class ProductsFeedHandle {
 			data.products.unshift(item.id)
 		}
 
-		$.post(ajax, data, function() {}, 'json').done(function(response) {
+		request.post(ajax, data).then(function(response) {
 
 			$('.loading').hide();
 
-			show_message(response.message, response.status);
+			SkilldoMessage.response(response)
 		});
 
 		return false;

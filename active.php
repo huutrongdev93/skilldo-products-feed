@@ -9,9 +9,8 @@ Class ProductsFeedActivator {
     }
     public static function createTable(): void
     {
-        $model = model();
-        if(!$model::schema()->hasTable('products_feed')) {
-            $model::schema()->create('products_feed', function ($table) {
+        if(!schema()->hasTable('products_feed')) {
+            schema()->create('products_feed', function ($table) {
                 $table->increments('id');
                 $table->string('name', 255)->collate('utf8mb4_unicode_ci');
                 $table->string('key', 255)->collate('utf8mb4_unicode_ci');
@@ -31,7 +30,7 @@ Class ProductsFeedActivator {
     {
         $model = model('routes');
         //add sitemap to router
-        $count = $model->count(Qr::set('slug', 'products-feed.xml')->where('plugin', 'ProductsFeed'));
+        $count = $model::where('slug', 'products-feed.xml')->where('plugin', 'ProductsFeed')->amount();
         if($count == 0) {
             $model->add(array(
                 'slug'        => 'products-feed.xml',
@@ -46,17 +45,17 @@ Class ProductsFeedActivator {
     public static function addOption() { }
     public static function addRole(): void
     {
-        $role = Role::get('root');
-        $role->add_cap('productsFeedList');
-        $role->add_cap('productsFeedAdd');
-        $role->add_cap('productsFeedEdit');
-        $role->add_cap('productsFeedDelete');
+        $role = Role::make()->get('root');
+        $role->add('productsFeedList');
+        $role->add('productsFeedAdd');
+        $role->add('productsFeedEdit');
+        $role->add('productsFeedDelete');
 
-        $role = Role::get('administrator');
-        $role->add_cap('productsFeedList');
-        $role->add_cap('productsFeedAdd');
-        $role->add_cap('productsFeedEdit');
-        $role->add_cap('productsFeedDelete');
+        $role = Role::make()->get('administrator');
+        $role->add('productsFeedList');
+        $role->add('productsFeedAdd');
+        $role->add('productsFeedEdit');
+        $role->add('productsFeedDelete');
     }
 }
 
@@ -70,8 +69,7 @@ Class ProductsFeedDeactivate {
     }
     public static function cropTable(): void
     {
-        $model = model();
-        $model::schema()->drop('products_feed');
+        schema()->drop('products_feed');
     }
     public static function deletePage(): void
     {

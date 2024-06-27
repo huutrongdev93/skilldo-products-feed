@@ -1,0 +1,1 @@
+<h3><a href="{!! Url::base('products-feed.xml?sign='.$feed->key) !!}" target="_blank">{!! Url::base('products-feed.xml?sign='.$feed->key) !!}</a></h3>

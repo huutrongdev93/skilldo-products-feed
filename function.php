@@ -1,92 +1,16 @@
 <?php
-Class PrFeed extends Model{
+Class PrFeed extends \SkillDo\Model\Model{
 
     static string $table = 'products_feed';
 
-    static function insert($insertData = [], $object = []) {
+    static array $columns = [
+        'value'             => ['array'],
+    ];
 
-        $columnsTable = [
-            'name'              => ['string'],
-            'key'               => ['string'],
-            'categoryGoogle'    => ['string'],
-            'categoryFacebook'  => ['string'],
-            'categoryWebsite'   => ['int', 0],
-            'type'              => ['string'],
-            'value'             => ['array'],
-            'timeUp'            => ['int', 0],
-            'order'             => ['int', 0],
-        ];
-
-        $columnsTable = apply_filters('columns_db_'.self::$table, $columnsTable);
-
-        $update = false;
-
-        if (!empty($insertData['id'])) {
-            $id        = (int) $insertData['id'];
-            $update    = true;
-            $oldObject = (have_posts($object)) ? $object : static::get($id);
-            if (!$oldObject) return new SKD_Error('invalid_discounts_id', __('ID không chính xác.'));
-        }
-
-        if(!$update) {
-            if(empty($insertData['name'])) return new SKD_Error('empty_name', __('Không thể cập nhật khi tiêu đề trống.'));
-        }
-
-        $insertData = createdDataInsert($columnsTable, $insertData, (isset($oldObject)) ? $oldObject : null);
-
-        foreach ($columnsTable as $columnsKey => $columnsValue) {
-            ${$columnsKey}  = $insertData[$columnsKey];
-        }
-
-        $data = apply_filters('pre_insert_'.self::$table.'_data', compact(array_keys($columnsTable)), $insertData, $update ? $oldObject : null);
-
-        $model = model(self::$table);
-
-        if ($update) {
-            if(!empty($insertData['created'])) {
-                $data['created'] = $insertData['created'];
-            }
-            if(!empty($insertData['updated'])) {
-                $data['updated'] = $insertData['updated'];
-            }
-            else {
-                $data['updated'] = gmdate('Y-m-d H:i:s', time() + 7*3600);
-            }
-            $model->update($data, Qr::set($id));
-            $id = (int) $id;
-
-        } else {
-            if(!empty($insertData['created'])) {
-                $data['created'] = $insertData['created'];
-            }
-            else {
-                $data['created'] = gmdate('Y-m-d H:i:s', time() + 7*3600);
-            }
-            $id = $model->add($data);
-        }
-        return apply_filters('after_insert_'.self::$table, $id, $insertData, $data, $update ? $oldObject : null);
-    }
-
-    static function update($update, $args) {
-        if(!have_posts($update)) return new SKD_Error('invalid_update', __('Không có trường dữ liệu nào được cập nhật.'));
-        if(!have_posts($args)) return new SKD_Error('invalid_update', __('Không có điều kiện cập nhật.'));
-        $update['updated'] = gmdate('Y-m-d H:i:s', time() + 7*3600);
-        return apply_filters('update_'.static::$table, model(static::$table)->update($update, $args), $update, $args);
-    }
-
-    static function delete($objectId = 0): array|bool
-    {
-        $objectId = (int)Str::clear($objectId);
-
-        if($objectId == 0) return false;
-
-        if(model(self::$table)->delete(Qr::set($objectId))) {
-            do_action('delete_'.self::$table.'_success', $objectId );
-            return [$objectId];
-        }
-
-        return false;
-    }
+    static array $rules = [
+        'created'           => true,
+        'updated'           => true,
+    ];
 }
 
 Class PFeedHelper {
@@ -181,6 +105,10 @@ Class PFeedHelper {
         }
         return $options;
     }
+
+    /**
+     * @throws DOMException
+     */
     static function createdXML($feed): bool|string
     {
         $xml = '';
@@ -237,7 +165,7 @@ Class PFeedHelper {
                 $gf_product['g:image_link']                 = Url::base().Template::imgLink($product->image);
 
                 //URL của hình ảnh bổ sung dành cho sản phẩm
-                $gallery = Gallery::getsItem(Qr::set('object_id', $product->id)->where('object_type', 'products'));
+                $gallery = GalleryItem::gets(Qr::set('object_id', $product->id)->where('object_type', 'products'));
 
                 if(have_posts($gallery)) {
                     $gf_product['g:additional_image_link'] = '';
@@ -373,7 +301,7 @@ Class PFeedHelper {
 
             CacheHandler::save('productsFeed_'.$feed->key, $xml, 12*60*60);
 
-            PrFeed::update(['timeUp' => time()], Qr::set($feed->id));
+            PrFeed::where('id', $feed->id)->update(['timeUp' => time()]);
         }
 
         return $xml;

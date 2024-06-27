@@ -1,16 +1,97 @@
 <?php
+
+use JetBrains\PhpStorm\NoReturn;
+use SkillDo\Validate\Rule;
+
 class AdminProductFeedsAjax {
-    static function productSearch($ci, $model): bool
+    #[NoReturn]
+    static function load(\SkillDo\Http\Request $request): void
     {
-        $result['status'] = 'error';
+        if($request->isMethod('post')) {
 
-        $result['message'] = 'Tìm sản phẩm không thành công';
+            $page    = $request->input('page');
 
-        if(Request::post()) {
+            $page   = (is_null($page) || empty($page)) ? 1 : (int)$page;
 
-            $keyword    = trim((string)Request::post('keyword'));
+            $limit  = $request->input('limit');
 
-            $categoryId = (int)trim((string)Request::post('categoryId'));
+            $limit   = (is_null($limit) || empty($limit)) ? 10 : (int)$limit;
+
+            $keyword = $request->input('keyword');
+
+            $recordsTotal   = $request->input('recordsTotal');
+
+            $args = Qr::set();
+
+            if (!empty($keyword)) {
+                $args->where('name', 'like', '%' . $keyword . '%');
+            }
+            /**
+             * @since 7.0.0
+             */
+            $args = apply_filters('admin_products_feed_controllers_index_args_before_count', $args);
+
+            if(!is_numeric($recordsTotal)) {
+                $recordsTotal = apply_filters('admin_products_feed_controllers_index_count', PrFeed::count($args), $args);
+            }
+
+            # [List data]
+            $args->limit($limit)
+                ->offset(($page - 1)*$limit)
+                ->orderBy('order')
+                ->orderBy('created', 'desc');
+
+            $args = apply_filters('admin_products_feed_controllers_index_args', $args);
+
+            $objects = apply_filters('admin_products_feed_controllers_index_objects', PrFeed::gets($args), $args);
+
+            $args = [
+                'items' => $objects,
+                'table' => 'products_feed',
+                'model' => model('products_feed'),
+                'module'=> 'products_feed',
+            ];
+
+            $table = new AdminProductsFeedTable($args);
+            $table->get_columns();
+            ob_start();
+            $table->display_rows_or_message();
+            $html = ob_get_contents();
+            ob_end_clean();
+
+            /**
+             * Bulk Actions
+             * @hook table_*_bulk_action_buttons Hook mới phiên bản 7.0.0
+             */
+            $buttonsBulkAction = apply_filters('table_products_feeds_bulk_action_buttons', []);
+
+            $bulkAction = Admin::partial('include/table/header/bulk-action-buttons', [
+                'actionList' => $buttonsBulkAction
+            ]);
+
+            $result['data'] = [
+                'html'          => base64_encode($html),
+                'bulkAction'    => base64_encode($bulkAction),
+            ];
+            $result['pagination']   = [
+                'limit' => $limit,
+                'total' => $recordsTotal,
+                'page'  => (int)$page,
+            ];
+
+            response()->success(trans('ajax.load.success'), $result);
+        }
+
+        response()->error(trans('ajax.load.error'));
+    }
+    #[NoReturn]
+    static function productSearch(\SkillDo\Http\Request $request): void
+    {
+        if($request->isMethod('post')) {
+
+            $keyword    = trim((string)$request->input('keyword'));
+
+            $categoryId = (int)trim((string)$request->input('categoryId'));
 
             $args = Qr::set('trash', 0)->where('public', 1)->select('id', 'title', 'image', 'price', 'price_sale')->orderBy('created');
 
@@ -24,78 +105,54 @@ class AdminProductFeedsAjax {
 
             $products = Product::gets($args);
 
-            $result['data'] = '';
+            $result = '';
 
             foreach ($products as $product) {
                 $product->image = Template::imgLink($product->image);
-                $result['data'] .= Plugin::partial(PR_FEED_NAME, 'admin/views/product-item', ['item' => $product], true);
+                $result .= Plugin::partial(PR_FEED_NAME, 'views/product-item', ['item' => $product]);
             }
 
-            $result['data'] = base64_encode($result['data']);
-
-            $result['status'] = 'success';
-
-            $result['message'] = 'Load dữ liệu thành công';
+            response()->success(trans('ajax.load.success'), base64_encode($result));
         }
 
-        echo json_encode( $result );
-
-        return false;
+        response()->error(trans('Tìm sản phẩm không thành công'));
     }
-    static function add($ci, $model): bool
+    #[NoReturn]
+    static function add(\SkillDo\Http\Request $request): void
     {
-
-        $result['status']  = 'error';
-
-        $result['message'] = __('Lưu dữ liệu không thành công');
-
         if (!Auth::hasCap('productsFeedAdd')) {
-            $result['message'] = 'Bạn không có quyền sử dụng chức năng này.';
-            echo json_encode($result);
-            return false;
+            response()->error(trans('Bạn không có quyền sử dụng chức năng này'));
         }
 
-        if(Request::post()) {
+        if($request->isMethod('post')) {
 
             $feeds = [];
 
-            if(empty(Request::post('name'))) {
-                $result['message'] = 'Bạn chưa điền tên feed';
-                echo json_encode($result);
-                return false;
-            }
-            $feeds['name'] = trim(Request::post('name'));
+            $validate = $request->validate([
+                'name' => Rule::make('Tên feed')->notEmpty(),
+                'categoryGoogle' => Rule::make('Danh mục google')->notEmpty(),
+                'categoryFacebook' => Rule::make('Danh mục facebook')->notEmpty(),
+                'productType' => Rule::make('loại sản phẩm sẽ áp dụng')->notEmpty(),
+            ]);
 
-            if(empty(Request::post('categoryGoogle'))) {
-                $result['message'] = 'Bạn chưa chọn danh mục google.';
-                echo json_encode($result);
-                return false;
+            if ($validate->fails()) {
+                response()->error($validate->errors());
             }
-            $feeds['categoryGoogle'] = trim(Request::post('categoryGoogle'));
 
-            if(empty(Request::post('categoryFacebook'))) {
-                $result['message'] = 'Bạn chưa chọn danh mục facebook.';
-                echo json_encode($result);
-                return false;
-            }
-            $feeds['categoryFacebook'] = trim(Request::post('categoryFacebook'));
+            $feeds['name'] = trim($request->input('name'));
 
-            $type = Request::post('productType');
+            $feeds['categoryGoogle'] = trim($request->input('categoryGoogle'));
 
-            if(empty($type)) {
-                $result['message'] = __('Bạn chưa chọn loại sản phẩm sẽ áp dụng.');
-                echo json_encode($result);
-                return false;
-            }
+            $feeds['categoryFacebook'] = trim($request->input('categoryFacebook'));
+
+            $type = $request->input('productType');
 
             if($type == 'category') {
 
-                $categoryId = (int)Request::Post('categoryWebsite');
+                $categoryId = (int)$request->input('categoryWebsite');
 
                 if(empty($categoryId)) {
-                    $result['message'] = __('Bạn chưa chọn danh mục sản phẩm sẽ lấy sản phẩm');
-                    echo json_encode($result);
-                    return false;
+                    response()->error(trans('Bạn chưa chọn danh mục sản phẩm sẽ lấy sản phẩm'));
                 }
 
                 $feeds['categoryWebsite'] = $categoryId;
@@ -103,12 +160,10 @@ class AdminProductFeedsAjax {
 
             if($type == 'productsCustom') {
 
-                $products = Request::Post('products');
+                $products = $request->input('products');
 
                 if(!have_posts($products)) {
-                    $result['message'] = __('Bạn chưa chọn sản phẩm sẽ áp dụng');
-                    echo json_encode($result);
-                    return false;
+                    response()->error(trans('Bạn chưa chọn sản phẩm sẽ áp dụng'));
                 }
 
                 $feeds['value'] = $products;
@@ -121,42 +176,29 @@ class AdminProductFeedsAjax {
             $error = PrFeed::insert($feeds);
 
             if(!is_skd_error($error)) {
-                $result['status']   = 'success';
-                $result['message']  = __('Lưu dữ liệu thành công.');
-                $result['location'] = Url::admin('plugins?page=products-feed');
+                response()->success(trans('ajax.save.success'), Url::admin('plugins/products-feed'));
             }
         }
 
-        echo json_encode($result);
-
-        return true;
+        response()->error(trans('ajax.add.error'));
     }
-    static function productLoad($ci, $model): bool
+    #[NoReturn]
+    static function productLoad(\SkillDo\Http\Request $request): void
     {
-        $result['status'] = 'error';
+        if($request->isMethod('post')) {
 
-        $result['message'] = 'Tìm sản phẩm không thành công';
-
-        if(Request::post()) {
-
-            $id = (int)Request::Post('id');
+            $id = (int)$request->input('id');
 
             $feeds = PrFeed::get($id);
 
             if(!have_posts($feeds)) {
-                $result['message'] = __('Danh sách này không tồn tại.');
-                echo json_encode($result);
-                return false;
+                response()->error(trans('danh sách này không tồn tại'));
             }
 
             $feeds->value = unserialize($feeds->value);
 
             if(!have_posts($feeds->value)) {
-                $result['products'] = [];
-                $result['status']   = 'success';
-                $result['message']  = 'Load dữ liệu thành công';
-                echo json_encode($result);
-                return false;
+                response()->success(trans('ajax.load.success'));
             }
 
             $args = Qr::set('trash', 0)->where('public', 1)->whereIn('id', $feeds->value)->select('id', 'title', 'image');
@@ -167,78 +209,55 @@ class AdminProductFeedsAjax {
                 $product->image = Template::imgLink($product->image);
             }
 
-            $result['products'] = $products;
-            $result['status']   = 'success';
-            $result['message']  = 'Load dữ liệu thành công';
+            response()->success(trans('ajax.load.success'), $products);
         }
 
-        echo json_encode( $result );
-
-        return false;
+        response()->error(trans('ajax.load.error'));
     }
-    static function save($ci, $model): bool
+    #[NoReturn]
+    static function save(\SkillDo\Http\Request $request): void
     {
-        $result['status']  = 'error';
-
-        $result['message'] = __('Lưu dữ liệu không thành công');
-
         if (!Auth::hasCap('productsFeedEdit')) {
-            $result['message'] = 'Bạn không có quyền sử dụng chức năng này.';
-            echo json_encode($result);
-            return false;
+            response()->error(trans('Bạn không có quyền sử dụng chức năng này'));
         }
 
-        if(Request::post()) {
+        if($request->isMethod('post')) {
 
-            $id = (int)Request::Post('id');
+            $id = (int)$request->input('id');
 
             $object = PrFeed::get($id);
 
             if(!have_posts($object)) {
-                $result['message'] = __('Danh sách này không tồn tại.');
-                echo json_encode($result);
-                return false;
+                response()->error(trans('Danh sách này không tồn tại'));
             }
 
             $feeds = [];
 
-            if(empty(Request::post('name'))) {
-                $result['message'] = 'Bạn chưa điền tên feed';
-                echo json_encode($result);
-                return false;
-            }
-            $feeds['name'] = trim(Request::post('name'));
+            $validate = $request->validate([
+                'name' => Rule::make('Tên feed')->notEmpty(),
+                'categoryGoogle' => Rule::make('Danh mục google')->notEmpty(),
+                'categoryFacebook' => Rule::make('Danh mục facebook')->notEmpty(),
+                'productType' => Rule::make('loại sản phẩm sẽ áp dụng')->notEmpty(),
+            ]);
 
-            if(empty(Request::post('categoryGoogle'))) {
-                $result['message'] = 'Bạn chưa chọn danh mục google.';
-                echo json_encode($result);
-                return false;
+            if ($validate->fails()) {
+                response()->error($validate->errors());
             }
-            $feeds['categoryGoogle'] = trim(Request::post('categoryGoogle'));
 
-            if(empty(Request::post('categoryFacebook'))) {
-                $result['message'] = 'Bạn chưa chọn danh mục facebook.';
-                echo json_encode($result);
-                return false;
-            }
-            $feeds['categoryFacebook'] = trim(Request::post('categoryFacebook'));
+            $feeds['name'] = trim($request->input('name'));
 
-            $type = Request::post('productType');
+            $feeds['categoryGoogle'] = trim($request->input('categoryGoogle'));
 
-            if(empty($type)) {
-                $result['message'] = __('Bạn chưa chọn loại sản phẩm sẽ áp dụng.');
-                echo json_encode($result);
-                return false;
-            }
+            $feeds['categoryFacebook'] = trim($request->input('categoryFacebook'));
+
+            $type = $request->input('productType');
 
             if($type == 'category') {
 
-                $categoryId = (int)Request::Post('categoryWebsite');
+                $categoryId = (int)$request->input('categoryWebsite');
 
                 if(empty($categoryId)) {
-                    $result['message'] = __('Bạn chưa chọn danh mục sản phẩm sẽ lấy sản phẩm');
-                    echo json_encode($result);
-                    return false;
+                    response()->error(trans('Bạn chưa chọn danh mục sản phẩm sẽ lấy sản phẩm'));
                 }
 
                 $feeds['categoryWebsite'] = $categoryId;
@@ -246,12 +265,10 @@ class AdminProductFeedsAjax {
 
             if($type == 'productsCustom') {
 
-                $products = Request::Post('products');
+                $products = $request->input('products');
 
                 if(!have_posts($products)) {
-                    $result['message'] = __('Bạn chưa chọn sản phẩm sẽ áp dụng');
-                    echo json_encode($result);
-                    return false;
+                    response()->error(trans('Bạn chưa chọn sản phẩm sẽ áp dụng'));
                 }
 
                 $feeds['value'] = $products;
@@ -265,49 +282,37 @@ class AdminProductFeedsAjax {
 
             if(!is_skd_error($error)) {
 
-                $result['status']   = 'success';
-                $result['message']  = __('Lưu dữ liệu thành công.');
-                $result['location'] = Url::admin('plugins?page=products-feed');
+                response()->success(trans('ajax.save.success'), Url::admin('plugins/products-feed'));
             }
         }
 
-        echo json_encode($result);
-
-        return true;
+        response()->error(trans('ajax.save.error'));
     }
-    static function createdXML($ci, $model): bool
+    #[NoReturn]
+    static function createdXML(\SkillDo\Http\Request $request): void
     {
-        $result['status']  = 'error';
+        if($request->isMethod('post')) {
 
-        $result['message'] = __('Lưu dữ liệu không thành công');
-
-        if(Request::post()) {
-
-            $id = (int)Request::Post('id');
+            $id = (int)$request->input('id');
 
             $object = PrFeed::get($id);
 
             if(!have_posts($object)) {
-                $result['message'] = __('Danh sách này không tồn tại.');
-                echo json_encode($result);
-                return false;
+                response()->error(trans('Danh sách này không tồn tại'));
             }
 
             $xml = PFeedHelper::createdXML($object);
 
             if(!empty($xml)) {
-                $result['status']   = 'success';
-                $result['message']  = __('Lưu dữ liệu thành công.');
-                $result['timeUp'] = date('d-m-Y H:i');
+                response()->success(trans('ajax.save.success'), ['timeUp' => date('d-m-Y H:i')]);
             }
         }
 
-        echo json_encode($result);
-
-        return true;
+        response()->error(trans('ajax.save.error'));
     }
 }
 
+Ajax::admin('AdminProductFeedsAjax::load');
 Ajax::admin('AdminProductFeedsAjax::productSearch');
 Ajax::admin('AdminProductFeedsAjax::add');
 Ajax::admin('AdminProductFeedsAjax::productLoad');

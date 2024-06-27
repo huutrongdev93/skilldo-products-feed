@@ -2,6 +2,7 @@
 Class AdminProductsFeedSetting {
     static function register($tabs) {
         $tabs['ProductsFeed']   = [
+            'group'       => 'marketing',
             'label'       => 'Shopping Feed',
             'description' => 'Quản lý cấu hình tạo file xml google shopping, facebook shopping',
             'callback'    => 'AdminProductsFeedSetting::render',
@@ -24,79 +25,75 @@ Class AdminProductsFeedSetting {
             $attributeOptions[$attribute->id] = $attribute->title;
         }
 
-        $formBarcode = new FormBuilder();
+        $formBarcode = form();
 
         $formBarcode
-            ->add('productsFeed[categoriesGoogle]', 'select2-multiple', [
+            ->select2('productsFeed[categoriesGoogle]', PFeedHelper::categoryGoogle(), [
                 'label' => 'Danh mục google shipping',
                 'note' => 'Danh mục google shipping sẽ được sử dụng trong website',
-                'options' => PFeedHelper::categoryGoogle()
+                'multiple' => true,
             ], $config['categoriesGoogle'])
-            ->add('productsFeed[categoriesFacebook]', 'select2-multiple', [
+            ->select2('productsFeed[categoriesFacebook]', PFeedHelper::categoryFacebook(), [
                 'label' => 'Danh mục facebook shipping',
                 'note' => 'Danh mục facebook shipping sẽ được sử dụng trong website',
-                'options' => PFeedHelper::categoryFacebook()
+                'multiple' => true,
             ], $config['categoriesFacebook'])
-            ->add('productsFeed[id]', 'select', [
-                'label'     => 'Mã nhận dạng sản phẩm',
-                'options'   => [
-                    'code' => 'Lấy từ mã sản phẩm',
-                    'id'   => 'Lấy từ id sản phẩm (mã hệ thống tự tạo)',
-                ],
+            ->select('productsFeed[id]', [
+                'code' => 'Lấy từ mã sản phẩm',
+                'id'   => 'Lấy từ id sản phẩm (mã hệ thống tự tạo)',
+            ], [
+                'label' => 'Mã nhận dạng sản phẩm',
                 'start' => 4
             ], $config['id'])
-            ->add('productsFeed[availability]', 'select', [
+            ->select('productsFeed[availability]', PFeedHelper::availability(), [
                 'label'     => 'Tình trạng còn hàng của sản phẩm',
-                'options'   => PFeedHelper::availability(),
                 'start' => 4
             ], $config['availability'])
-            ->add('productsFeed[condition]', 'select', [
-                'label'     => 'Tình trạng thời điểm bán',
-                'options'   => [
-                    'new'           => 'Sản phẩm mới',
-                    'used'          => 'Đã qua sử dụng',
-                    'refurbished'   => 'Đã được tân trang',
-                ],
+            ->select('productsFeed[condition]', [
+                'new'           => 'Sản phẩm mới',
+                'used'          => 'Đã qua sử dụng',
+                'refurbished'   => 'Đã được tân trang',
+            ], [
+                'label' => 'Tình trạng thời điểm bán',
                 'start' => 4
             ], $config['condition'])
-            ->add('productsFeed[color]', 'select', [
+            ->select('productsFeed[color]', $attributeOptions, [
                 'label'     => 'Tùy chọn cho Màu (Color)',
-                'options'   => $attributeOptions,
                 'note'      => 'Dùng cho tất cả các sản phẩm hàng may mặc',
                 'start' => 4
             ], $config['color'])
-            ->add('productsFeed[size]', 'select', [
+            ->select('productsFeed[size]', $attributeOptions, [
                 'label'     => 'Tùy chọn cho Size',
-                'options'   => $attributeOptions,
                 'note'      => 'Dùng cho tất cả các sản phẩm hàng may mặc',
                 'start' => 4
             ], $config['size']);
 
-        Admin::partial('function/system/html/default', [
+        Admin::view('components/system-default', [
             'title'       => 'Cấu hình Products Feed',
             'description' => 'Quản lý cấu hình products feed mặc định của sản phẩm',
             'form'        => $formBarcode
         ]);
     }
-    static function save($result, $data) {
-        if(isset($data['productsFeed'])) {
+    static function save(\SkillDo\Http\Request $request): void
+    {
+        if($request->has('productsFeed')) {
+            $productsFeed = $request->input('productsFeed');
             $config = PFeedHelper::config();
             $config['categoriesGoogle'] = [];
-            if(!empty($data['productsFeed']['categoriesGoogle'])) {
-                $config['categoriesGoogle'] = Str::clear($data['productsFeed']['categoriesGoogle']);
+            if(!empty($productsFeed['categoriesGoogle'])) {
+                $config['categoriesGoogle'] = Str::clear($productsFeed['categoriesGoogle']);
             }
             $config['categoriesFacebook'] = [];
-            if(!empty($data['productsFeed']['categoriesFacebook'])) {
-                $config['categoriesFacebook'] = Str::clear($data['productsFeed']['categoriesFacebook']);
+            if(!empty($productsFeed['categoriesFacebook'])) {
+                $config['categoriesFacebook'] = Str::clear($productsFeed['categoriesFacebook']);
             }
-            $config['id']  = Str::clear($data['productsFeed']['id']);
-            $config['availability'] = Str::clear($data['productsFeed']['availability']);
-            $config['condition']    = Str::clear($data['productsFeed']['condition']);
-            $config['color']    = Str::clear($data['productsFeed']['color']);
-            $config['size']    = Str::clear($data['productsFeed']['size']);
+            $config['id']  = Str::clear($productsFeed['id']);
+            $config['availability'] = Str::clear($productsFeed['availability']);
+            $config['condition']    = Str::clear($productsFeed['condition']);
+            $config['color']    = Str::clear($productsFeed['color']);
+            $config['size']    = Str::clear($productsFeed['size']);
             Option::update('ProductsFeedConfig', $config);
         }
-        return $result;
     }
 }
 
