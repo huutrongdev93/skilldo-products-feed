@@ -21,7 +21,7 @@ Class ProductsFeedActivator {
                 $table->text('value')->collate('utf8mb4_unicode_ci');
                 $table->integer('timeUp')->default(0);
                 $table->integer('order')->default(0);
-                $table->dateTime('created');
+                $table->dateTime('created')->default('CURRENT_TIMESTAMP');
                 $table->dateTime('updated')->nullable();
             });
         }
