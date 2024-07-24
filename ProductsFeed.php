@@ -1,13 +1,4 @@
 <?php
-/**
- * Plugin name     : Products Feed
- * Plugin class    : ProductsFeed
- * Plugin uri      : http://sikido.vn
- * Description     : Ứng dụng hỗ trợ nguồn cung cấp dữ liệu sản phẩm để thêm vào chạy Google Shopping Ads và Facebook Ads
- * Author          : SKDSoftware Dev Team
- * Version         : 1.1.0
- */
-
 const PR_FEED_NAME = 'ProductsFeed';
 
 Class ProductsFeed {

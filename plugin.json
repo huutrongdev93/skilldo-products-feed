@@ -1,0 +1,8 @@
+{
+    "name":"Products Feed",
+    "class":"ProductsFeed",
+    "url":"https://sikido.vn",
+    "description":"Ứng dụng hỗ trợ nguồn cung cấp dữ liệu sản phẩm để thêm vào chạy Google Shopping Ads và Facebook Ads",
+    "author":"SKDSoftware Dev Team",
+    "version":"1.1.0"
+}
