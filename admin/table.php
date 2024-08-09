@@ -56,9 +56,9 @@ class AdminProductsFeedTable extends SKDObjectTable {
 
        if (\Auth::hasCap('productsFeedDelete')) {
            $listButton[] = Admin::btnDelete([
-               'trash' => 'disable', 'id' => $item->id,
-               'module' => 'PrFeed',
-               'des' => 'Bạn chắc chắn muốn xóa '.$item->name.' ?'
+               'id' => $item->id,
+               'model' => 'PrFeed',
+               'description' => 'Bạn chắc chắn muốn xóa '.$item->name.' ?'
            ]);
        }
         /**
