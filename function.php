@@ -15,7 +15,7 @@ Class PrFeed extends \SkillDo\Model\Model{
 
 Class PFeedHelper {
     static function categoryGoogle() {
-        $category = CacheHandler::get('GoogleProductsFeedCategory');
+        $category = \SkillDo\Cache::get('GoogleProductsFeedCategory');
         if(empty($category)) {
             $category = [];
             $handle = fopen("https://www.google.com/basepages/producttype/taxonomy.vi-VN.txt", "r");
@@ -26,13 +26,13 @@ Class PFeedHelper {
                     $category[$line] = $line;
                 }
                 fclose($handle);
-                CacheHandler::save('ProductsFeedCategory', $category);
+                \SkillDo\Cache::save('ProductsFeedCategory', $category);
             }
         }
         return $category;
     }
     static function categoryFacebook() {
-        $category = CacheHandler::get('FacebookProductsFeedCategory');
+        $category = \SkillDo\Cache::get('FacebookProductsFeedCategory');
         if(empty($category)) {
             $category = [];
             $handle = fopen(Path::plugin(PR_FEED_NAME).'/categories/facebook.txt', "r");
@@ -43,7 +43,7 @@ Class PFeedHelper {
                     $category[$line] = $line;
                 }
                 fclose($handle);
-                CacheHandler::save('FacebookProductsFeedCategory', $category);
+                \SkillDo\Cache::save('FacebookProductsFeedCategory', $category);
             }
         }
         return $category;
@@ -299,7 +299,7 @@ Class PFeedHelper {
 
             $xml = $doc->saveXML();
 
-            CacheHandler::save('productsFeed_'.$feed->key, $xml, 12*60*60);
+            \SkillDo\Cache::save('productsFeed_'.$feed->key, $xml, 12*60*60);
 
             PrFeed::where('id', $feed->id)->update(['timeUp' => time()]);
         }
@@ -318,7 +318,7 @@ function ProductsFeedXml(): void
 
     $cacheKey = 'productsFeed_'.$key;
 
-    $xml = CacheHandler::get($cacheKey);
+    $xml = \SkillDo\Cache::get($cacheKey);
 
     if(empty($xml)) {
         $feed = PrFeed::get(Qr::set('key' , $key));
