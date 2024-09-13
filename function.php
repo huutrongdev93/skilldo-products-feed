@@ -1,15 +1,10 @@
 <?php
 Class PrFeed extends \SkillDo\Model\Model{
 
-    static string $table = 'products_feed';
+    protected string $table = 'products_feed';
 
-    static array $columns = [
+    protected array $columns = [
         'value'             => ['array'],
-    ];
-
-    static array $rules = [
-        'created'           => true,
-        'updated'           => true,
     ];
 }
 
