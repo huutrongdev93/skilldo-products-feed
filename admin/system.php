@@ -99,4 +99,4 @@ Class AdminProductsFeedSetting {
 
 add_filter('skd_system_tab' , 'AdminProductsFeedSetting::register', 20);
 add_action('admin_system_ProductsFeed_html', 'AdminProductsFeedSetting::renderDefault', 10);
-add_filter('admin_system_ProductsFeed_save', 'AdminProductsFeedSetting::save',10,2);
+add_action('admin_system_ProductsFeed_save', 'AdminProductsFeedSetting::save');
